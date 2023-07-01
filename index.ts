@@ -6,6 +6,9 @@ import { execSync } from "child_process";
 
 if (isMainThread) {
   const characters = readdirSync("./characters");
+  const numberOfWorkers = os.cpus().length - 1;
+  /** keep track of number of active workers to know when all of them finished */
+  let numberOfActiveWorkers = 0;
 
   /**
    * Generate atlas for next character using worker
@@ -13,21 +16,33 @@ if (isMainThread) {
   function generateAtlas(worker: Worker) {
     /** Get next character */
     const characterId = characters.shift();
-    if (characterId == undefined) return;
-    console.log(`GENERATING ${characterId}`);
+    /** Check if we've ran out of characters */
+    if (characterId == undefined)
+      if (numberOfActiveWorkers == 0) {
+        /** Check if all other workers are inactive, meaning that whole process is finished */
+        console.timeEnd("GENERATED CHARACTER ATLASES");
+        process.exit(1);
+      } else return;
+
+    console.log(`GENERATING ${characterId} on thread #${worker.threadId}`);
     console.time(`GENERATED ${characterId}`);
     /** Trigger atlas generation in worker */
     worker.postMessage(characterId);
+    numberOfActiveWorkers++;
   }
 
-  for (let _ = 0; _ < os.cpus().length; _++) {
+  console.time("GENERATED CHARACTER ATLASES");
+
+  for (let _ = 0; _ < numberOfWorkers; _++) {
     const worker = new Worker(__filename).on("message", (characterId) => {
       /** Log that atlas has generated */
       console.timeEnd(`GENERATED ${characterId}`);
+      numberOfActiveWorkers--;
 
       /** Generate Another atlas */
       generateAtlas(worker);
     });
+
     /** Kick off atlas generation */
     generateAtlas(worker);
   }

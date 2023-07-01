@@ -56,6 +56,9 @@ if (isMainThread) {
    */
   parentPort!.on("message", (characterId: string) => {
     execSync(
+      /**
+       * Execute Texture packer with all the configuration stored in `config.tps` file
+       */
       `TexturePacker config.tps --sheet atlases/${characterId}.png --data atlases/${characterId}.json characters/${characterId}`
     );
     parentPort!.postMessage(characterId);

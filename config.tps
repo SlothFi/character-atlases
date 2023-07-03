@@ -66,7 +66,7 @@
         <key>shapePadding</key>
         <uint>0</uint>
         <key>jpgQuality</key>
-        <uint>80</uint>
+        <uint>100</uint>
         <key>pngOptimizationLevel</key>
         <uint>7</uint>
         <key>webpQualityLevel</key>

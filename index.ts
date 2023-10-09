@@ -1,32 +1,28 @@
 import path from "path";
 import { readdirSync } from "fs";
 import * as os from "os";
+import * as fs from "fs";
 import { Worker, isMainThread, parentPort } from "node:worker_threads";
 import { execSync } from "child_process";
+const minify = require("jsonminify");
 
 if (isMainThread) {
   const characters = readdirSync("./characters");
   const numberOfWorkers = os.cpus().length - 1;
-  /** keep track of number of active workers to know when all of them finished */
   let numberOfActiveWorkers = 0;
 
-  /**
-   * Generate atlas for next character using worker
-   */
   function generateAtlas(worker: Worker) {
-    /** Get next character */
     const characterId = characters.shift();
-    /** Check if we've ran out of characters */
-    if (characterId == undefined)
-      if (numberOfActiveWorkers == 0) {
-        /** Check if all other workers are inactive, meaning that whole process is finished */
+    if (characterId === undefined) {
+      if (numberOfActiveWorkers === 0) {
         console.timeEnd("GENERATED CHARACTER ATLASES");
         process.exit(1);
       } else return;
+    }
 
     console.log(`GENERATING ${characterId} on thread #${worker.threadId}`);
     console.time(`GENERATED ${characterId}`);
-    /** Trigger atlas generation in worker */
+
     worker.postMessage(characterId);
     numberOfActiveWorkers++;
   }
@@ -35,32 +31,62 @@ if (isMainThread) {
 
   for (let _ = 0; _ < numberOfWorkers; _++) {
     const worker = new Worker(__filename).on("message", (characterId) => {
-      /** Log that atlas has generated */
       console.timeEnd(`GENERATED ${characterId}`);
       numberOfActiveWorkers--;
 
-      /** Generate Another atlas */
+      // Modify JSON file after TexturePacker completes
+      const atlasJsonPath = path.join("atlases", `${characterId}.json`);
+      const jsonData = fs.readFileSync(atlasJsonPath, "utf8");
+      const atlasData = JSON.parse(jsonData);
+
+      atlasData.textures.forEach((texture: any) => {
+        texture.frames.forEach((frame: any) => {
+          const filename = frame.filename;
+          const anchor = calculateAnchor(filename);
+          frame.anchor = anchor;
+        });
+      });
+
+      fs.writeFileSync(atlasJsonPath, JSON.stringify(atlasData));
+
+      // Minify JSON after modifying
+      const minifiedData = minify(JSON.stringify(atlasData));
+      fs.writeFileSync(atlasJsonPath, minifiedData);
+
       generateAtlas(worker);
     });
 
-    /** Kick off atlas generation */
     generateAtlas(worker);
   }
 } else {
-  /**
-   * WORKER STUFF
-   */
-
-  /**
-   * Listen for message and Execute texture packer
-   */
   parentPort!.on("message", (characterId: string) => {
     execSync(
-      /**
-       * Execute Texture packer with all the configuration stored in `config.tps` file
-       */
       `TexturePacker config.tps --sheet atlases/${characterId}.png --data atlases/${characterId}.json characters/${characterId}`
     );
+
+    // Minify JSON after TexturePacker completes
+    const atlasJsonPath = path.join("atlases", `${characterId}.json`);
+    const jsonData = fs.readFileSync(atlasJsonPath, "utf8");
+    const minifiedData = minify(jsonData);
+    fs.writeFileSync(atlasJsonPath, minifiedData);
+
     parentPort!.postMessage(characterId);
   });
+}
+
+function calculateAnchor(filename: any) {
+  const anchors: any = {
+    "idle": { x: 0.5, y: 0.76 },
+    "run-down": { x: 0.5, y: 0.83 },
+    "run-right": { x: 0.5, y: 0.84 },
+    "run-up": { x: 0.5, y: 0.84 },
+    "run-left": { x: 0.5, y: 0.84 },
+    "skate-down": { x: 0.5, y: 0.78 },
+    "skate-up": { x: 0.5, y: 0.78 },
+    "skate-left": { x: 0.5, y: 0.79 },
+    "skate-right": { x: 0.5, y: 0.79 },
+  };
+
+  const key = Object.keys(anchors).find((key) => filename.includes(key));
+  return key ? anchors[key] : { x: 0.5, y: 0.78 };
 }

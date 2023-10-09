@@ -167,9 +167,9 @@
             <key>heuristicMask</key>
             <false/>
             <key>defaultPivotPoint</key>
-            <point_f>0.5,0.5</point_f>
+            <point_f>0.5,0.78</point_f>
             <key>writePivotPoints</key>
-            <false/>
+            <true/>
         </struct>
         <key>individualSpriteSettings</key>
         <map type="IndividualSpriteSettingsMap"/>

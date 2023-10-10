@@ -66,7 +66,7 @@
         <key>shapePadding</key>
         <uint>0</uint>
         <key>jpgQuality</key>
-        <uint>80</uint>
+        <uint>100</uint>
         <key>pngOptimizationLevel</key>
         <uint>7</uint>
         <key>webpQualityLevel</key>
@@ -167,9 +167,9 @@
             <key>heuristicMask</key>
             <false/>
             <key>defaultPivotPoint</key>
-            <point_f>0.5,0.5</point_f>
+            <point_f>0.5,0.78</point_f>
             <key>writePivotPoints</key>
-            <false/>
+            <true/>
         </struct>
         <key>individualSpriteSettings</key>
         <map type="IndividualSpriteSettingsMap"/>
